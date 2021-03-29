@@ -9,3 +9,4 @@ SubsampleSAM.py
 GenerateTxpFastaFromDecoy.sh
 GenerateSAMHeaderFromDecoy.sh
 ConcatenateSAMHeaderSAM.sh
+GenerateFastqFromSAM.sh

@@ -4,9 +4,6 @@ from enum import Enum
 import numpy as np
 import copy
 
-### global var
-
-
 ### function
 class SAM(Enum):
     QNAME = 0
@@ -25,21 +22,24 @@ def cliParser(argv):
     saminputfile = ''
     samoutputfile = ''
     try:
-        opts, args = getopt.getopt(argv, "hs:o:", ["saminputfile", "samoutputfile"])
+        opts, args = getopt.getopt(argv, "hs:o:D:", ["saminputfile", "samoutputfile", "DEG"])
     except getopt.GetoptError:
-        print('python3 SubsampleSAM.py -s <saminputfile> -o <samoutputfile>')
+        print('python3 SubsampleSAM.py -s <saminputfile> -o <samoutputfile> -D <DEG>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('python3 SubsampleSAM.py -s <saminputfile> -o <samoutputfile>')
+            print('python3 SubsampleSAM.py -s <saminputfile> -o <samoutputfile> -D <DEG>')
             sys.exit()
         elif opt in ("-s", "--saminputfile"):
             saminputfile = arg
         elif opt in ("-o", "--samoutputfile"):
             samoutputfile = arg
+        elif opt in ["-D", "--DEG"]:
+            DEG = arg
     print("saminputfile", saminputfile)
     print("samoutputfile", samoutputfile)
-    return saminputfile, samoutputfile
+    print("DEG", DEG)
+    return saminputfile, samoutputfile, DEG
 
 def parseSAM(saminputfile, samoutputfile, DEG):
     samrecords = []
@@ -47,7 +47,7 @@ def parseSAM(saminputfile, samoutputfile, DEG):
     with open(saminputfile) as f:
         line = f.readline()[:-1]
         if "SO:queryname" not in line:
-            print("saminputfile should be sorted by queryname(i.e., samtools sort -n <saminputfile>)")
+            print("Exception: saminputfile should be sorted by queryname(i.e., samtools sort -n <saminputfile>)")
             sys.exit()
         while line[0] == '@':
             line = f.readline()[:-1]
@@ -67,7 +67,7 @@ def parseSAM(saminputfile, samoutputfile, DEG):
             line = f.readline()[:-1]
         samrecords, txpnames, found, cur_records, cur_txpnames = parseSAM_found(samrecords, txpnames, found, cur_records, cur_txpnames)
 
-    writeLines(samoutputfile + ".sam", samrecords)
+    writeLines(samoutputfile + ".noheadersam", samrecords)
     writeLines(samoutputfile + ".txpnames", txpnames)
     return samrecords, txpnames
 
@@ -87,5 +87,5 @@ def writeLines(filename, obj):
             f_out.write(i + "\n")
 
 if __name__ == "__main__":
-    saminputfile, samoutputfile = cliParser(sys.argv[1:])
-    samrecords, txpnames = parseSAM(saminputfile, samoutputfile, "Gm28661")
+    saminputfile, samoutputfile, DEG = cliParser(sys.argv[1:])
+    samrecords, txpnames = parseSAM(saminputfile, samoutputfile, DEG)
