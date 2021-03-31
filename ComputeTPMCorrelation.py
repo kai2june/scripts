@@ -5,8 +5,10 @@ from scipy import stats
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import math
 
 def cliParser(argv):
+    authorinputfile = ''
     samgroundinputfile = ''
     decoyinputfile = ''
     proinputfile = ''
@@ -16,14 +18,16 @@ def cliParser(argv):
     fastainputfile1 = ''
     fastainputfile2 = ''
     try:
-        opts, args = getopt.getopt(argv, "hs:d:g:p:t:b:1:2:", ["samgroundinputfile", "proinputfile", "polyesterinputfile", "toolinputfile", "bedinputfile", "fastainputfile1", "fastainputfile2"])
+        opts, args = getopt.getopt(argv, "ha:s:d:g:p:t:b:1:2:", ["authorinputfile", "samgroundinputfile", "proinputfile", "polyesterinputfile", "toolinputfile", "bedinputfile", "fastainputfile1", "fastainputfile2"])
     except getopt.GetoptError:
-        print('python3 ComputeTPMCorrelation.py -s <samgroundinputfile> -g <proinputfile> -p <polyesterinputfile> -t <toolinputfile> < -b <bedinputfile> / -1 <fastainputfile1> -2 <fastainputfile2> >')
+        print('python3 ComputeTPMCorrelation.py -a <authorinputfile> -s <samgroundinputfile> -g <proinputfile> -p <polyesterinputfile> -t <toolinputfile> < -b <bedinputfile> / -1 <fastainputfile1> -2 <fastainputfile2> >')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('python3 ComputeTPMCorrelation.py -s <samgroundinputfile> -g <proinputfile> -p <polyesterinputfile> -t <toolinputfile> < -b <bedinputfile> / -1 <fastainputfile1> -2 <fastainputfile2> >')
+            print('python3 ComputeTPMCorrelation.py -a <authorinputfile> -s <samgroundinputfile> -g <proinputfile> -p <polyesterinputfile> -t <toolinputfile> < -b <bedinputfile> / -1 <fastainputfile1> -2 <fastainputfile2> >')
             sys.exit()
+        elif opt in ("-a", "--authorinputfile"):
+            authorinputfile = arg
         elif opt in ("-s", "--samgroundinputfile"):
             samgroundinputfile = arg            
         elif opt in ("-g", "--proinputfile"):
@@ -38,6 +42,7 @@ def cliParser(argv):
             fastainputfile1 = arg
         elif opt in ["-2", "--fastainputfile2"]:
             fastainputfile2 = arg
+    print ("authorinputfile", authorinputfile)
     print ("samgroundinputfile ", samgroundinputfile)
     print ("proinputfile ", proinputfile)
     print ("polyesterinputfile ", polyesterinputfile)
@@ -45,7 +50,7 @@ def cliParser(argv):
     print ("bedinputfile ", bedinputfile)
     print ("fastainputfile1 ", fastainputfile1)
     print ("fastainputfile2 ", fastainputfile2)
-    return samgroundinputfile, proinputfile, polyesterinputfile, toolinputfile, bedinputfile, fastainputfile1, fastainputfile2
+    return authorinputfile, samgroundinputfile, proinputfile, polyesterinputfile, toolinputfile, bedinputfile, fastainputfile1, fastainputfile2
 
 def computeTPMFromPro(inputfile):
     print("ground truth from PRO.")
@@ -93,7 +98,7 @@ def computeTPMFromFasta(proinputfile, fastainputfile1, fastainputfile2):
 
     txp_tpm = computeTPMImpl(list(txp_len.values()), list(txp_count.values()))
     return dict(zip(list(txp_len.keys())[:], txp_tpm[:]))
-def computeTPMFromBed(proinputfile, bedinputfile):
+def computeTPMFromBed(proinputfile, bedinputfile, isLongerTxpName=False):
     print("ground truth from BED.")
     txp_len = dict()
     txp_count = dict()
@@ -101,8 +106,9 @@ def computeTPMFromBed(proinputfile, bedinputfile):
         line = f.readline()[:-1]
         while line:
             ll = line.split()
-            txp_len[ll[1]] = float(ll[3]) / 1000.0
-            txp_count[ll[1]] = 0.0
+            txp_name = ll[1] if not isLongerTxpName else ll[1].split(".")[0]
+            txp_len[txp_name] = float(ll[3]) / 1000.0
+            txp_count[txp_name] = 0.0
             line = f.readline()[:-1]
 
     with open(bedinputfile) as f:
@@ -110,12 +116,14 @@ def computeTPMFromBed(proinputfile, bedinputfile):
         while line:
             ll = line.split()
             if ll[0] != "polyA":
-                txp_count[ll[3].split(":")[2]] += 1.0
+                txp_name = ll[3].split(":")[2] if not isLongerTxpName else ll[3].split(":")[2].split(".")[0]
+                txp_count[txp_name] += 1.0
             line = f.readline()[:-1] # read fasta line header
     txp_tpm = computeTPMImpl(list(txp_len.values()), list(txp_count.values()))
     return dict(zip(list(txp_len.keys())[:], txp_tpm[:]))
 
 def computeTPMFromSAM(samgroundinputfile, txp_length):
+    print(len(txp_length)) ## sam header has 196354 @SQ  ## 196520 in .gtf
     txp_count = dict()
     for k in txp_length.keys():
         txp_count[k] = 0.0
@@ -127,13 +135,14 @@ def computeTPMFromSAM(samgroundinputfile, txp_length):
             ll = line.split()
             txp_count[ll[2]] += 1.0
             line = f.readline()[:-1]
-    
+    # print(txp_count)
+
     txp_tpm = dict()
     denom = 0.0
     for k in txp_length.keys():
-        denom += txp_count[k] / (10**6) / txp_len[k]
+        denom += txp_count[k] / (10**6) / txp_length[k]
     for k in txp_length.keys():
-        txp_tpm[k] = txp_count[k] / txp_len[k] / denom
+        txp_tpm[k] = txp_count[k] / txp_length[k] / denom
     return txp_tpm
 
 def computeTPMImpl(txp_len, txp_count):
@@ -145,7 +154,7 @@ def computeTPMImpl(txp_len, txp_count):
         txp_tpm.append(txp_count[i] / txp_len[i] / denom)
     return txp_tpm
 
-def getTPMFromSalmon(inputfile, isSAMgroundinputfile):
+def getTPMFromSalmon(inputfile, isSAMgroundinputfile=False):
     txp_tpm = dict()
     txp_length = dict()
     with open(inputfile) as f:
@@ -162,12 +171,12 @@ def getTPMFromSalmon(inputfile, isSAMgroundinputfile):
             line = f.readline()[:-1]
     return txp_tpm, txp_length
 
-def computeCorrelation(groundtruthTPM, toolTPM, isNascent):
+def computeCorrelation(groundtruthTPM, toolTPM, isNascent, convertToLog):
     relation = list(set(groundtruthTPM) & set(toolTPM))
     if isNascent:
         relation = list(set(groundtruthTPM) | set(toolTPM))
-    print("transcript .pro_count", len(set(groundtruthTPM)), ".salmon count", len(set(toolTPM)))
-
+    print("transcript groundtruth_count", len(set(groundtruthTPM)), ".salmon count", len(set(toolTPM)))
+    print ("{} transcripts account for correlation.".format(len(relation)))
     name = []
     ground = []
     tool = []
@@ -181,13 +190,27 @@ def computeCorrelation(groundtruthTPM, toolTPM, isNascent):
             tool.append(toolTPM[k])
         else:
             tool.append(0.0)
-    print(name)
-    print(ground)
-    print(tool)
+    if convertToLog:
+        for i in range(len(ground)):
+            if ground[i] != 0.0:
+                ground[i] = math.log(ground[i], 2)
+            if tool[i] != 0.0:
+                tool[i] = math.log(tool[i], 2)
+
+    # print(name)
+    # print(ground)
+    # print(tool)
     df = pd.DataFrame([ground, tool]).transpose()
     df.index = name
-    df.columns = ["ground_TPM", "salmon_TPM"]
-    print("gene1 30% read count(30%nascent inside), gene2 70% read count(0%nascent inside)")
+    col1 = ''
+    col2 = ''
+    if convertToLog:
+        col1 = "ground_logTPM"
+        col2 = "salmon_logTPM"
+    else:
+        col1 = "ground_TPM"
+        col2 = "salmon_TPM"
+    df.columns = [col1, col2]
     print(df)
     print("salmon index transcrpitome", stats.spearmanr(ground, tool))
     print("salmon index transcriptome pearson" , stats.pearsonr(ground, tool))
@@ -238,31 +261,56 @@ def computeTPMFromPolyester(polyesterinputfile, txp_length):
 
     return txp_tpm
 
+def getTPMFromAuthor(authorinputfile):
+    txp_tpm = dict()
+    with open(authorinputfile) as f:
+        line = f.readline()[:-1]
+        while line:
+            ll = line.split()
+            txp_tpm[ll[0]] = float(ll[1])
+            line = f.readline()[:-1]
+    return txp_tpm
+
 if __name__ == "__main__":
-    samgroundinputfile, proinputfile, polyesterinputfile, toolinputfile, bedinputfile, fastainputfile1, fastainputfile2 = cliParser(sys.argv[1:])
+    authorinputfile, samgroundinputfile, proinputfile, polyesterinputfile, toolinputfile, bedinputfile, fastainputfile1, fastainputfile2 = cliParser(sys.argv[1:])
     isSAMgroundinputfile = False
     if samgroundinputfile:
         isSAMgroundinputfile = True
 
     toolTPM, txp_length = getTPMFromSalmon(toolinputfile, isSAMgroundinputfile)
-        
+
     isNascent = True
-    if samgroundinputfile:
+    isLongerTxpName = True
+    if authorinputfile:
+        groundtruthTPM = getTPMFromAuthor(authorinputfile)
+        computeCorrelation(groundtruthTPM, toolTPM, False, True)
+    elif samgroundinputfile:
         groundtruthTPM = computeTPMFromSAM(samgroundinputfile, txp_length)
-        computeCorrelation(groundtruthTPM, toolTPM, False)
+        computeCorrelation(groundtruthTPM, toolTPM, False, True)
     elif proinputfile:
         if bedinputfile:
-            groundtruthTPM = computeTPMFromBed(proinputfile, bedinputfile)
-            computeCorrelation(groundtruthTPM, toolTPM, isNascent)
+            groundtruthTPM = computeTPMFromBed(proinputfile, bedinputfile, isLongerTxpName=True)
+            computeCorrelation(groundtruthTPM, toolTPM, isNascent=True, convertToLog=False)
         elif fastainputfile1 and fastainputfile2:
             groundtruthTPM = computeTPMFromFasta(proinputfile, fastainputfile1, fastainputfile2)
-            computeCorrelation(groundtruthTPM, toolTPM, isNascent)
+            computeCorrelation(groundtruthTPM, toolTPM)
         else:
             groundtruthTPM = computeTPMFromPro(proinputfile)
-            computeCorrelation(groundtruthTPM, toolTPM, isNascent)
+            computeCorrelation(groundtruthTPM, toolTPM)
     elif polyesterinputfile:
         groundtruthTPM = computeTPMFromPolyester(polyesterinputfile, txp_length)
-        computeCorrelation(groundtruthTPM, toolTPM, isNascent)
+        computeCorrelation(groundtruthTPM, toolTPM)
     else:
         raise Exception("Neither proinputfile nor polyesterinputfile are given.")
     
+
+# mRNA polyA tail夠長 應該會有很多尾巴, 不夠多
+# 我是解overall EM, 別讓她只專注大值, 例如算error的時候多去處理他的期望值
+# 論文說salmon, sailfish, kallisto的false negative較多, 可專注在小值(被salmon估為接近0)
+
+# 可以分給isoform也一定可以分給nascent 從alignment著手, alignment就判斷是什麼reads, EM對兩種reads分別考慮(exon read, intron read, exon-exon, intron-exon junction)
+
+# 會不會是gene太長, 
+# 找論文是否已存在怎麼算nascent RNA表現量 (一定有實際wet lab研究)(用RNAseq我們想把nascent剔除 以便更好估表現量)
+
+# 說不定沒有成功使用hisat2結果, 研究一下
