@@ -293,34 +293,32 @@ if __name__ == "__main__":
     
     salmonTPM = ''
     txp_length = ''
+    bitseqRPKM = ''
     if salmoninputfile:
         salmonTPM, txp_length = getTPMFromSalmon(salmoninputfile, isSAMgroundinputfile)
-    bitseqRPKM = ''
-    if bitseqinputfile:
+    elif bitseqinputfile:
         bitseqRPKM = getRPKMFromBitseq(bitseqinputfile)
+    
     isNascent = True
     isLongerTxpName = True
-
-    if bitseqinputfile:
-        if authorinputfile:
-            groundtruthTPM = getTPMFromAuthor(authorinputfile)
-            computeCorrelation(groundtruthTPM, salmonTPM, False, True)
-        elif bedinputfile and proinputfile:
-            groundtruthTPM = computeTPMFromBed(proinputfile, bedinputfile, isLongerTxpName=True)
-            computeCorrelation(groundtruthTPM, bitseqRPKM, False, convertToLog=True)
+    if authorinputfile and bitseqinputfile:
+        groundtruthTPM = getTPMFromAuthor(authorinputfile)
+        computeCorrelation(groundtruthTPM, salmonTPM, False, True)
+    elif proinputfile and bedinputfile and bitseqinputfile:
+        groundtruthTPM = computeTPMFromBed(proinputfile, bedinputfile, isLongerTxpName=True)
+        computeCorrelation(groundtruthTPM, bitseqRPKM, False, convertToLog=True)
     elif samgroundinputfile:
         groundtruthTPM = computeTPMFromSAM(samgroundinputfile, txp_length)
         computeCorrelation(groundtruthTPM, salmonTPM, False, True)
+    elif proinputfile and bedinputfile:
+        groundtruthTPM = computeTPMFromBed(proinputfile, bedinputfile, isLongerTxpName=True)
+        computeCorrelation(groundtruthTPM, salmonTPM, isNascent=True, convertToLog=False)
+    elif proinputfile and fastainputfile1 and fastainputfile2:
+        groundtruthTPM = computeTPMFromFasta(proinputfile, fastainputfile1, fastainputfile2)
+        computeCorrelation(groundtruthTPM, salmonTPM)
     elif proinputfile:
-        if bedinputfile:
-            groundtruthTPM = computeTPMFromBed(proinputfile, bedinputfile, isLongerTxpName=True)
-            computeCorrelation(groundtruthTPM, salmonTPM, isNascent=True, convertToLog=False)
-        elif fastainputfile1 and fastainputfile2:
-            groundtruthTPM = computeTPMFromFasta(proinputfile, fastainputfile1, fastainputfile2)
-            computeCorrelation(groundtruthTPM, salmonTPM)
-        else:
-            groundtruthTPM = computeTPMFromPro(proinputfile)
-            computeCorrelation(groundtruthTPM, salmonTPM)
+        groundtruthTPM = computeTPMFromPro(proinputfile)
+        computeCorrelation(groundtruthTPM, salmonTPM)
     elif polyesterinputfile:
         groundtruthTPM = computeTPMFromPolyester(polyesterinputfile, txp_length)
         computeCorrelation(groundtruthTPM, salmonTPM)
