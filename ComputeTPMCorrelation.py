@@ -17,17 +17,18 @@ def cliParser(argv):
     salmoninputfile = ''
     expressinputfile = ''
     bitseqinputfile = ''
+    rseminputfile = ''
     bedinputfile = ''
     fastainputfile1 = ''
     fastainputfile2 = ''
     try:
-        opts, args = getopt.getopt(argv, "ha:s:g:p:t:e:q:b:1:2:", ["authorinputfile", "samgroundinputfile", "proinputfile", "polyesterinputfile", "salmoninputfile", "expressinputfile", "bitseqinputfile", "bedinputfile", "fastainputfile1", "fastainputfile2"])
+        opts, args = getopt.getopt(argv, "ha:s:g:p:t:e:q:m:b:1:2:", ["authorinputfile", "samgroundinputfile", "proinputfile", "polyesterinputfile", "salmoninputfile", "expressinputfile", "bitseqinputfile", "rseminputfile", "bedinputfile", "fastainputfile1", "fastainputfile2"])
     except getopt.GetoptError:
-        print('python3 ComputeTPMCorrelation.py -a <authorinputfile> -s <samgroundinputfile> -g <proinputfile> -p <polyesterinputfile> { -t <salmoninputfile> -e <expressinputfile> -q <bitseqinputfile> } { -b <bedinputfile> / -1 <fastainputfile1> -2 <fastainputfile2> }')
+        print('python3 ComputeTPMCorrelation.py -a <authorinputfile> -s <samgroundinputfile> -g <proinputfile> -p <polyesterinputfile> { -t <salmoninputfile> -e <expressinputfile> -q <bitseqinputfile> -m <rseminputfile>} { -b <bedinputfile> / -1 <fastainputfile1> -2 <fastainputfile2> }')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print('python3 ComputeTPMCorrelation.py -a <authorinputfile> -s <samgroundinputfile> -g <proinputfile> -p <polyesterinputfile> { -t <salmoninputfile> -e <expressinputfile> -q <bitseqinputfile> } { -b <bedinputfile> / -1 <fastainputfile1> -2 <fastainputfile2> }')
+            print('python3 ComputeTPMCorrelation.py -a <authorinputfile> -s <samgroundinputfile> -g <proinputfile> -p <polyesterinputfile> { -t <salmoninputfile> -e <expressinputfile> -q <bitseqinputfile> -m <rseminputfile>} { -b <bedinputfile> / -1 <fastainputfile1> -2 <fastainputfile2> }')
             sys.exit()
         elif opt in ("-a", "--authorinputfile"):
             authorinputfile = arg
@@ -43,6 +44,8 @@ def cliParser(argv):
             expressinputfile = arg
         elif opt in ("-q", "--bitseqinputfile"):
             bitseqinputfile = arg
+        elif opt in ("-m", "--rseminputfile"):
+            rseminputfile = arg
         elif opt in ("-b", "--bedinputfile"):
             bedinputfile = arg
         elif opt in ["-1", "--fastainputfile1"]:
@@ -56,10 +59,11 @@ def cliParser(argv):
     print ("salmoninputfile ", salmoninputfile)
     print ("expressinputfile ", expressinputfile)
     print ("bitseqinputfile ", bitseqinputfile)
+    print ("rseminputfile", rseminputfile)
     print ("bedinputfile ", bedinputfile)
     print ("fastainputfile1 ", fastainputfile1)
     print ("fastainputfile2 ", fastainputfile2)
-    return authorinputfile, samgroundinputfile, proinputfile, polyesterinputfile, salmoninputfile, expressinputfile, bitseqinputfile, bedinputfile, fastainputfile1, fastainputfile2
+    return authorinputfile, samgroundinputfile, proinputfile, polyesterinputfile, salmoninputfile, expressinputfile, bitseqinputfile, rseminputfile, bedinputfile, fastainputfile1, fastainputfile2
 
 def computeTPMFromPro(inputfile):
     print("ground truth from PRO.")
@@ -194,7 +198,10 @@ def getTPMFromExpress(inputfile):
 def writeTPMFile(groundtruthTPM, toolTPM):
     with open("TPM.txt", 'w') as f:
         for k in toolTPM.keys():
-            f.write(k + " " + str(groundtruthTPM[k]) + " " + str(toolTPM[k]) + "\n")
+            if not k in groundtruthTPM.keys():
+                f.write(k + " " + "NotInGroundFile" + " " + str(toolTPM[k]) + "\n")
+            else:
+                f.write(k + " " + str(groundtruthTPM[k]) + " " + str(toolTPM[k]) + "\n")
 
 def computeCorrelation(groundtruthTPM, toolTPM, isNascent, convertToLog, proinputfile, onlyComputeProExpressed):
     writeTPMFile(groundtruthTPM, toolTPM)
@@ -211,10 +218,7 @@ def computeCorrelation(groundtruthTPM, toolTPM, isNascent, convertToLog, proinpu
                     ll = line.split()
                     if float(ll[9]) > 0:
                         relation.append(ll[1])
-                    line = f.readline()[:-1]
-
-    print("transcript groundtruth_count", len(set(groundtruthTPM)), ".tool count", len(set(toolTPM)))
-    print ("{} transcripts account for correlation.".format(len(relation)))            
+                    line = f.readline()[:-1]   
 
     decoy = dict()
     if proinputfile:
@@ -224,6 +228,9 @@ def computeCorrelation(groundtruthTPM, toolTPM, isNascent, convertToLog, proinpu
                 if line.split()[1] in relation:
                     decoy[line.split()[1]] = []
                 line = f.readline()[:-1]
+
+    print("transcript groundtruth_count", len(set(groundtruthTPM)), ".tool count", len(set(toolTPM)))
+    print ("{} transcripts account for correlation.".format(len(decoy.keys())))         
 
     col1 = []
     col2 = []
@@ -237,11 +244,11 @@ def computeCorrelation(groundtruthTPM, toolTPM, isNascent, convertToLog, proinpu
         else:
             col2.append(0.0)
     if convertToLog:
-        for k in decoy.keys():
-            if col1 != 0.0:
-                col1 = math.log(col1, 2)
-            if col2 != 0.0:
-                col2 = math.log(col2, 2)
+        for i in range(len(col1)):
+            if col1[i] != 0.0:
+                col1[i] = math.log(col1[i], 2)
+            if col2[i] != 0.0:
+                col2[i] = math.log(col2[i], 2)
     
     df = pd.DataFrame([col1, col2]).transpose()
     df.index = list(decoy.keys())
@@ -263,64 +270,65 @@ def computeCorrelation(groundtruthTPM, toolTPM, isNascent, convertToLog, proinpu
     print(df)
     print("salmon index transcrpitome", stats.spearmanr(col1, col2))
     print("salmon index transcriptome pearson" , stats.pearsonr(col1, col2))
-    
-    draw_x = []
-    draw_y = []
-    for i in range(len(relation)):
-        draw_x.append(col1[i])
-        draw_y.append(col2[i])
-    plt.scatter(draw_x, draw_y)
-    a = np.linspace(0.0, 10000.0, num=10001, endpoint=True)
-    plt.scatter(a,a, s=1)
-    plt.title(titlename)
-    plt.savefig(figname)
 
-    # writeFile of FP, FN, TPTN
-    FP = []
-    FN = []
-    TPTN = []
-    FP_dict = dict()
-    FN_dict = dict()
-    expressed_threshold = 0
-    for k in groundtruthTPM.keys():
-        if groundtruthTPM[k] <= expressed_threshold and toolTPM[k] > expressed_threshold:
-            FP.append(k)
-            FP_dict[k] = toolTPM[k]
-        elif groundtruthTPM[k] > expressed_threshold and toolTPM[k] <= expressed_threshold:
-            FN.append(k)
-            FN_dict[k] = toolTPM[k]
-        else:
-            TPTN.append(k)
-    # with open ("FPgroundcount"+str(expressed_threshold)+".txt", 'w') as f:
-    #     for k in FP:
+    # print(len(col1), len(col2))
+    # draw_x = []
+    # draw_y = []
+    # for i in range(len(col1)):
+    #     draw_x.append(col1[i])
+    #     draw_y.append(col2[i])
+    # plt.scatter(draw_x, draw_y)
+    # a = np.linspace(0.0, 10000.0, num=10001, endpoint=True)
+    # plt.scatter(a,a, s=1)
+    # plt.title(titlename)
+    # plt.savefig(figname)
+
+    # # writeFile of FP, FN, TPTN
+    # FP = []
+    # FN = []
+    # TPTN = []
+    # FP_dict = dict()
+    # FN_dict = dict()
+    # expressed_threshold = 0
+    # for k in groundtruthTPM.keys():
+    #     if groundtruthTPM[k] <= expressed_threshold and toolTPM[k] > expressed_threshold:
+    #         FP.append(k)
+    #         FP_dict[k] = toolTPM[k]
+    #     elif groundtruthTPM[k] > expressed_threshold and toolTPM[k] <= expressed_threshold:
+    #         FN.append(k)
+    #         FN_dict[k] = toolTPM[k]
+    #     else:
+    #         TPTN.append(k)
+    # # with open ("FPgroundcount"+str(expressed_threshold)+".txt", 'w') as f:
+    # #     for k in FP:
+    # #         f.write(k + '\n')
+    # # with open ("FNgroundcount"+str(expressed_threshold)+".txt", 'w') as f:
+    # #     for k in FN:
+    # #         f.write(k + '\n')
+    # with open ("TPTNgroundcount"+str(expressed_threshold)+".txt", 'w') as f:
+    #     for k in TPTN:
     #         f.write(k + '\n')
-    # with open ("FNgroundcount"+str(expressed_threshold)+".txt", 'w') as f:
-    #     for k in FN:
+
+    # # get topN FP
+    # topN_FP = len(FP_dict)
+    # FPtopN = []
+    # for counter in range(topN_FP):
+    #     ky = max(FP_dict.items(), key=operator.itemgetter(1))[0]
+    #     FPtopN.append(ky)
+    #     FP_dict.pop(ky, None)
+    # with open("FPgroundcount"+str(expressed_threshold)+"top"+str(topN_FP)+".txt", 'w') as f:
+    #     for k in FPtopN:
     #         f.write(k + '\n')
-    with open ("TPTNgroundcount"+str(expressed_threshold)+".txt", 'w') as f:
-        for k in TPTN:
-            f.write(k + '\n')
 
-    # get topN FP
-    topN_FP = len(FP_dict)
-    FPtopN = []
-    for counter in range(topN_FP):
-        ky = max(FP_dict.items(), key=operator.itemgetter(1))[0]
-        FPtopN.append(ky)
-        FP_dict.pop(ky, None)
-    with open("FPgroundcount"+str(expressed_threshold)+"top"+str(topN_FP)+".txt", 'w') as f:
-        for k in FPtopN:
-            f.write(k + '\n')
-
-    topN_FN = len(FN_dict)
-    FNtopN = []
-    for counter in range(topN_FN):
-        ky = max(FN_dict.items(), key=operator.itemgetter(1))[0]
-        FNtopN.append(ky)
-        FN_dict.pop(ky, None)
-    with open("FNgroundcount"+str(expressed_threshold)+"top"+str(topN_FN)+".txt", 'w') as f:
-        for k in FNtopN:
-            f.write(k + '\n')
+    # topN_FN = len(FN_dict)
+    # FNtopN = []
+    # for counter in range(topN_FN):
+    #     ky = max(FN_dict.items(), key=operator.itemgetter(1))[0]
+    #     FNtopN.append(ky)
+    #     FN_dict.pop(ky, None)
+    # with open("FNgroundcount"+str(expressed_threshold)+"top"+str(topN_FN)+".txt", 'w') as f:
+    #     for k in FNtopN:
+    #         f.write(k + '\n')
 
 def computeTPMFromPolyester(polyesterinputfile, txp_length):
     txp_tpm = dict()
@@ -360,8 +368,19 @@ def getRPKMFromBitseq(bitseqinputfile):
             line = f.readline()[:-1]
     return txp_rpkm
 
+def getTPMFromrsem(rseminputfile):
+    txp_rpkm = dict()
+    with open(rseminputfile) as f:
+        line = f.readline()[:-1]
+        line = f.readline()[:-1]
+        while line:
+            ll = line.split()
+            txp_rpkm[ll[0]] = float(ll[5])
+            line = f.readline()[:-1]
+    return txp_rpkm
+
 if __name__ == "__main__":
-    authorinputfile, samgroundinputfile, proinputfile, polyesterinputfile, salmoninputfile, expressinputfile, bitseqinputfile, bedinputfile, fastainputfile1, fastainputfile2 = cliParser(sys.argv[1:])
+    authorinputfile, samgroundinputfile, proinputfile, polyesterinputfile, salmoninputfile, expressinputfile, bitseqinputfile, rseminputfile, bedinputfile, fastainputfile1, fastainputfile2 = cliParser(sys.argv[1:])
     isSAMgroundinputfile = False
     if samgroundinputfile:
         isSAMgroundinputfile = True
@@ -370,13 +389,16 @@ if __name__ == "__main__":
     txp_length = ''
     expressTPM = ''
     bitseqRPKM = ''
+    rsemTPM = ''
     if salmoninputfile:
         salmonTPM, txp_length = getTPMFromSalmon(salmoninputfile, isSAMgroundinputfile)
     elif expressinputfile:
         expressTPM = getTPMFromExpress(expressinputfile)
     elif bitseqinputfile:
         bitseqRPKM = getRPKMFromBitseq(bitseqinputfile)
-    
+    elif rseminputfile:
+        rsemTPM = getTPMFromrsem(rseminputfile)
+
     isNascent = True
     isLongerTxpName = True
     if authorinputfile and bitseqinputfile:
@@ -394,6 +416,8 @@ if __name__ == "__main__":
             computeCorrelation(groundtruthTPM, salmonTPM, isNascent=True, convertToLog=False, proinputfile=proinputfile, onlyComputeProExpressed=False)
         elif expressinputfile:
             computeCorrelation(groundtruthTPM, expressTPM, isNascent=True, convertToLog=False, proinputfile=proinputfile, onlyComputeProExpressed=False)
+        elif rseminputfile:
+            computeCorrelation(groundtruthTPM, rsemTPM, isNascent=True, convertToLog=False, proinputfile=proinputfile, onlyComputeProExpressed=False)
     elif proinputfile and fastainputfile1 and fastainputfile2:
         groundtruthTPM = computeTPMFromFasta(proinputfile, fastainputfile1, fastainputfile2)
         computeCorrelation(groundtruthTPM, salmonTPM)
