@@ -335,29 +335,29 @@ def writeRank(groundtruthTPM, toolTPM):
     expressed_threshold = 0
     for k in relation:
         if groundtruthTPM[k] <= expressed_threshold and toolTPM[k] > expressed_threshold:
-            FP.append(k)
             FP_dict[k] = toolTPM[k] - 0
         elif groundtruthTPM[k] > expressed_threshold and toolTPM[k] <= expressed_threshold:
-            FN.append(k)
             FN_dict[k] = 0 - groundtruthTPM[k]
         else:
-            TPTN.append(k)
             TPTN_dict[k] = abs(groundtruthTPM[k] - toolTPM[k])
 
     # get topN FP
     with open("FPrank.txt", 'w') as f:
+        f.write(str(len(FP_dict)) + '\n')
         for counter in range(len(FP_dict)):
             ky = max(FP_dict.items(), key=operator.itemgetter(1))[0]
             f.write(ky + " " + str(FP_dict[ky]) + '\n')
             FP_dict.pop(ky, None)
 
     with open("FNrank.txt", 'w') as f:
+        f.write(str(len(FN_dict)) + '\n')
         for counter in range(len(FN_dict)):
             ky = min(FN_dict.items(), key=operator.itemgetter(1))[0]
             f.write(ky + " " + str(FN_dict[ky]) + '\n')
             FN_dict.pop(ky, None)
 
     with open("TPTNrank.txt", 'w') as f:
+        f.write(str(len(TPTN_dict)) + '\n')
         for counter in range(len(TPTN_dict)):
             ky = min(TPTN_dict.items(), key=operator.itemgetter(1))[0]
             f.write(ky + " " + str(TPTN_dict[ky]) + '\n')
