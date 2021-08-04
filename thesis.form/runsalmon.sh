@@ -5,7 +5,7 @@ percent=0
 tool="jimmy_salmon"
 index="txp"
 mode="idx"
-branch="eqvclass_leading_group_prob_gap_large_enough.0.1"
+branch="transcript_in_N_eqvclass"
 transcript_fasta="gffread.txp.fa"
 for i in $(seq 1 ${replicate})
 do

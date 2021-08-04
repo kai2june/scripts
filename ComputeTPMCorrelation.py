@@ -327,6 +327,7 @@ def readFalseNegativeList(filename):
     return FN
 
 def writeRank(groundtruthTPM, toolTPM):
+    print ("Writing FP,FN,TPTN rank... .txt")
     # writeFile of FP, FN, TPTN
     relation = list(set(groundtruthTPM) & set(toolTPM))
     FP_dict = dict()
