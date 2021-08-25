@@ -9,7 +9,7 @@ def draw_hist(eqvEntropy, category, maxEntropy):
     plt.ylim(0,3000)
     plt.hist(eqvEntropy, bins=bins, edgecolor='black')
     plt.xlabel("entropy in an equivalence class")
-    plt.ylabel("count of transcript")
+    plt.ylabel("count of equivalence class")
     plt.title("Entropy distribution: Eqvclass FP/TP ratio " + category + "(" + str(len(eqvEntropy)) + "s)")
     plt.savefig(category + "_entropy" + ".png")
     plt.clf()
