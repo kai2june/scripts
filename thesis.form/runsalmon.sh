@@ -5,20 +5,23 @@ percent=0
 tool="jimmy_salmon"
 index="txp"
 mode="idx"
-branch="transcript_in_N_eqvclass"
+branch="multimapping_entropy.seqBias.gcBias"
+options="-d --seqBias --gcBias"
+# options="-d --transcriptome_size_no_nascent 34611 --add_nascent_threshold 1.0 --intron_read_percentage_in_nascent_at_least 1.0"
 transcript_fasta="gffread.txp.fa"
 for i in $(seq 1 ${replicate})
 do
     cd /home/0309meeting/0413/txp_vs_genetxp/nascent${percent}%/txpgene${percent}%.rep${i} && 
-    if [ ! -d ${tool}.${index} ] 
+    if [ ! -d ${tool}.${index}.${branch} ] 
         then
-            mkdir ${tool}.${index}
+            mkdir ${tool}.${index}.${branch}
     fi
-    cd ${tool}.${index} && 
+    cd ${tool}.${index}.${branch} && 
     if [ ${mode} = "idx" ]
     then
         echo "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<quant in idx mode"
-        salmon quant -i /home/droso.reference/salmon.${index}.index -l A -1 ../txpgene${percent}%_1.fasta -2 ../txpgene${percent}%_2.fasta -d -o ${tool}.${index}.${branch}.${mode}quant
+        salmon quant -i /home/droso.reference/salmon.${index}.index -l A -1 ../txpgene${percent}%_1.fasta -2 ../txpgene${percent}%_2.fasta ${options} -o ${tool}.${index}.${branch}.${mode}quant &&
+        echo "dummy line."
     elif [ ${mode} = "aln" ]
     then
         echo "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<quant in aln mode"

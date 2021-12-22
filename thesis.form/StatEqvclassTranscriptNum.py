@@ -2,17 +2,19 @@ import readline
 import numpy as np
 from matplotlib import pyplot as plt
 
-def draw_hist(eqvCount, category, maxGroupSize):
+def draw_hist(eqvCount, category, maxGroupSize, y_bound, x_bound):
     bins = np.arange(start=0, stop=maxGroupSize, step=1)
-    plt.ylim(0, 7000)
+    plt.ylim(0, y_bound)
+    plt.xlim(0, x_bound)
     plt.hist(eqvCount, bins=bins, edgecolor='black')
-    plt.xlabel("average transcript number in an equivalence class")
-    plt.ylabel("count of transcript")
-    if category == "FalsePositive":
-        plt.title("Eqvclass size distribution: " + category + " top50%(" + str(len(eqvCount)) + "s)")
+    #plt.xlabel("transcript number in an equivalence class", fontsize=18)
+    #plt.ylabel("count of the eqv. class", fontsize=18)
+    if category == "FP transcript":
+        #plt.title("Size dist.: Eqv. class with " + category, fontsize=18)
+        plt.savefig("FalsePositive_avgEqvTranscriptNum" + ".png")
     else:
-        plt.title("Eqvclass size distritution: " + category + " " + str(len(eqvCount)) + "s")
-    plt.savefig(category + "_avgEqvTranscriptNum" + ".png")
+        #plt.title("Size dist.: Eqv. class with " + category, fontsize=18)
+        plt.savefig("TruePositive_avgEqvTranscriptNum" + ".png")
     plt.clf()
 
 def statEqvclasstTranscriptNum(eqvfilename, FPfilename, FNfilename, TPTNfilename):
@@ -85,5 +87,9 @@ if __name__ == "__main__":
         TP_total = TP_total + TP_eqvCount
         if maxGroupSize > sz:
             sz = maxGroupSize
-    draw_hist(FP_total, "FalsePositive", sz)
-    draw_hist(TP_total, "TruePositive", sz)
+    x_bound = 50
+    y_bound = 8000
+    draw_hist(FP_total, "FP transcript", sz, y_bound, x_bound)
+    draw_hist(TP_total, "TP transcript", sz, y_bound, x_bound)
+
+### @brief 3 seconds execution time.
