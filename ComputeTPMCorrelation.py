@@ -24,8 +24,8 @@ def cliParser(argv):
     fastainputfile1 = ''
     fastainputfile2 = ''
     falseNegativeinputfile = ''
-    isUnion=False
-    isNascent=False
+    isUnion=False # False:only transcript are used for correlation, True:transcripts+others are used for correlation
+    isNascent=False # False: nascent aren't used for correlation, True:nascent are used for correlation
     try:
         opts, args = getopt.getopt(argv, "ha:s:g:p:t:k:c:e:q:m:b:1:2:n:ij", ["authorinputfile", "samgroundinputfile", "proinputfile", "polyesterinputfile", "salmoninputfile", "kallistoinputfile", "cufflinksinputfile", "expressinputfile", "bitseqinputfile", "rseminputfile", "bedinputfile", "fastainputfile1", "fastainputfile2", "falseNegativeinputfile", "isUnion", "isNascent"])
     except getopt.GetoptError:
